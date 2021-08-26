@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import matplotlib.pyplot as plt
 import torchvision.transforms as t
 
 from PIL import Image
@@ -87,3 +89,28 @@ def normalize():
     """
 
     return t.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+
+
+def plot_loss(loss):
+    """
+
+    :param loss:
+    :return:
+    """
+
+    loss = np.array(loss)
+    generator_loss = loss[:, 0]
+    discriminator_loss = loss[:, 1]
+
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8))
+
+    fig.suptitle('avg loss per epoch')
+
+    axes[0].plot(generator_loss)
+    axes[0].set(xlabel='epoch', ylabel='generator loss')
+
+    axes[1].plot(discriminator_loss)
+    axes[1].set(xlabel='epoch', ylabel='discriminator loss')
+
+    plt.savefig(os.path.join('output', 'loss.png'))
+    plt.close()

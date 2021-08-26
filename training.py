@@ -1,11 +1,9 @@
 import torch
 import time
 import logging
-import os
 
-# config for logger
-logging.basicConfig(filename=os.path.join('output', 'run.log'), filemode='a', format='%(asctime)s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 
 def calc_time(func):
@@ -19,7 +17,9 @@ def calc_time(func):
         start = time.time()
         losses = func(*args, **kwargs)
         end = time.time()
-        logging.info(f'epoch {kwargs["epoch"]}: {end - start}')
+        logging.info(f'epoch {kwargs["epoch"]}: time: {end - start:.2f}, avg generator loss {losses[0]:.4f}, '
+                     f'avg discriminator loss {losses[1]:.4f}')
+
         return losses
 
     return inner_func
@@ -42,6 +42,9 @@ def train(generator, discriminator, train_dataloader, generator_optimizer, discr
     :param kwargs:
     :return:
     """
+
+    generator_losses = []
+    discriminator_losses = []
 
     for i, (low_res, high_res) in enumerate(train_dataloader):
         #####################################################################################
@@ -109,4 +112,7 @@ def train(generator, discriminator, train_dataloader, generator_optimizer, discr
         # zero gradients
         generator.zero_grad()
 
-        return total_loss_g.item(), total_loss_d.item()
+        generator_losses.append(total_loss_g.item())
+        discriminator_losses.append((total_loss_d.item()))
+
+    return sum(generator_losses) / len(generator_losses), sum(discriminator_losses) / len(discriminator_losses)
