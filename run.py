@@ -3,21 +3,22 @@ import torch.nn as nn
 import torch.utils.data.dataset as dataset
 
 import os
-import multiprocessing
+import time
+import multiprocessing as mp
+
+from torchvision.transforms import transforms as t
+from PIL import Image
 
 from models.generator import Generator
 from models.discriminator import Discriminator
 from models.content_loss import ContentLoss
-
 from datasets.train_dataset import TrainDataset
-
 from utils import utils_img
 
 
 def train():
 
     for i, (low_res, high_res) in enumerate(train_dataloader):
-
         #####################################################################################
         # 1. discriminator network:
         #####################################################################################
@@ -85,7 +86,7 @@ def train():
 
 
 if __name__ == '__main__':
-    multiprocessing.freeze_support()
+    mp.freeze_support()
 
     # hyperparameters
     learning_rate = 0.0001
@@ -95,9 +96,12 @@ if __name__ == '__main__':
     eta = 1
     lambda_ = 0.005
 
+    # check device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     # create model
-    generator = Generator(23)
-    discriminator = Discriminator(image_size=128)
+    generator = Generator(nr_blocks=23).to(device)
+    discriminator = Discriminator(image_size=128).to(device)
 
     # loss = 0.01 * perceptual loss + content loss + 0.005 * adversarial loss
     perceptual_criterion = nn.L1Loss()
@@ -114,20 +118,27 @@ if __name__ == '__main__':
 
     # datasets, dataloaders and test image
     path_train = os.path.join('data', 'train_data')
-    test_img = utils_img.transform_low(low_res_size=128)(os.path.join('data', 'test_img.png'))
+    # test_img = t.Compose([t.ToTensor()])(Image.open('data/test_img.jpg').convert('RGB'))
     train_dataset = TrainDataset(path_train)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, num_workers=4)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
+                                                   num_workers=4, pin_memory=True, drop_last=True)
 
     for e in range(epochs):
         # train GAN
+        start = time.time()
         train()
+        end = time.time()
+        print(f'epoch {e}, time: {end - start}')
 
-        # generate and save super resolution image from test image for each epoch
-        with torch.no_grad():
-            super_res = generator(test_img)
-            utils_img.save_image(super_res.detach(), os.path.join('output', f'super_resolution_{e}.png'))
+        if e % 100 == 0:
+            # save model
+            # TODO: only save current model if current model is more accurate than last stored (best) model
+            torch.save(generator.state_dict(), os.path.join('output', f'generator_{e}.pth'))
+            torch.save(discriminator.state_dict(), os.path.join('output', f'discriminator_{e}.pth'))
 
-        # save model
-        # TODO: only save current model if current model is more accurate than last stored (best) model
-        torch.save(generator.state_dict(), os.path.join('output', f'generator_{e}.pth'))
-        torch.save(discriminator.state_dict(), os.path.join('output', f'discriminator_{e}.pth'))
+            # generate and save super resolution image from test image for each epoch
+            with torch.no_grad():
+                start = time.time()
+                super_resolution = torch.randn((3, 128, 128))  # generator(test_img.unsqueeze(dim=0))
+                end = time.time()
+                utils_img.save_image(super_resolution.detach(), os.path.join('output', f'super_resolution_{e}.png'))

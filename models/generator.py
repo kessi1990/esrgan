@@ -21,7 +21,7 @@ class ResidualBlock(nn.Module):
         # generator for blocks 1-4
         gen_block = (lambda i: nn.Sequential(
             nn.Conv2d(in_channels=channels + i * growth_channels, out_channels=growth_channels,
-                      kernel_size=3, stride=1, padding=1),
+                      kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         ))
 
@@ -33,7 +33,7 @@ class ResidualBlock(nn.Module):
 
         # last conv layer without leaky relu
         self.conv_5 = nn.Conv2d(in_channels=channels + 4 * growth_channels, out_channels=channels,
-                                kernel_size=3, stride=1, padding=1)
+                                kernel_size=(3, 3), stride=(1, 1), padding=1)
 
     def forward(self, x):
         """
@@ -94,27 +94,27 @@ class Generator(nn.Module):
         self.nr_blocks = nr_blocks
 
         # input / first layer
-        self.conv_1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv_1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # network trunk containing RRDBs
         self.trunk = nn.Sequential(*[ResidualInResidualDenseBlock(channels=64, growth_channels=32, scale=0.2)
                                      for _ in range(self.nr_blocks)])
 
         # conv layer after RRDBs
-        self.conv_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # upsampling layers
-        self.up_1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
-        self.up_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.up_1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
+        self.up_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # follow up layer after upsampling layers
         self.conv_3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
 
         # output layer
-        self.conv_4 = nn.Conv2d(in_channels=64, out_channels=3, kernel_size=3, stride=1, padding=1)
+        self.conv_4 = nn.Conv2d(in_channels=64, out_channels=3, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
     def forward(self, x):
         """

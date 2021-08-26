@@ -30,7 +30,7 @@ def save_image(image, path):
     :param path:
     :return:
     """
-    image = t.ToPILImage()(image)
+    image = t.ToPILImage()(image.squeeze())
     image.save(path)
 
 

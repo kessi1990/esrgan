@@ -16,13 +16,13 @@ class Discriminator(nn.Module):
 
         # first conv layer
         self.conv_1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1, stride=1),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3, 3), padding=1, stride=(1, 1)),
             nn.LeakyReLU()
         )
 
         # second conv layer
         self.conv_2 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1, stride=2),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), padding=1, stride=(2, 2)),
             nn.BatchNorm2d(num_features=64),
             nn.LeakyReLU()
         )
@@ -33,12 +33,12 @@ class Discriminator(nn.Module):
 
         # generator for discriminator blocks
         gen_block = (lambda in_c, out_c, s: nn.Sequential(
-            nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=3, padding=1, stride=s, bias=False),
+            nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=(3, 3), padding=1, stride=s, bias=False),
             nn.BatchNorm2d(num_features=out_c),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         ))
 
-        self.discriminator_blocks = nn.Sequential(*[gen_block(in_c, out_c, i % 2 + 1)
+        self.discriminator_blocks = nn.Sequential(*[gen_block(in_c, out_c, (i % 2 + 1, i % 2 + 1))
                                                     for i, (in_c, out_c) in enumerate(zip(in_channels, out_channels))])
 
         self.classifier = nn.Sequential(
