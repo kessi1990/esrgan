@@ -5,11 +5,13 @@ class Discriminator(nn.Module):
     """
 
     """
+
     def __init__(self, image_size):
         """
 
         :param image_size:
         """
+
         super(Discriminator, self).__init__()
 
         feature_size = image_size // 32
@@ -53,8 +55,10 @@ class Discriminator(nn.Module):
         :param x:
         :return:
         """
+
         out = self.conv_1(x)
         out = self.conv_2(out)
         out = self.discriminator_blocks(out)
         batch, *size = out.shape
+
         return self.classifier(out.view(batch, -1))

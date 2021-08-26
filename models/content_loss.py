@@ -12,6 +12,7 @@ class ContentLoss(nn.Module):
         """
 
         """
+
         super(ContentLoss, self).__init__()
 
         # 36th layer of vgg19 acts as feature extractor
@@ -28,4 +29,5 @@ class ContentLoss(nn.Module):
         :param target:
         :return:
         """
+
         return functional.l1_loss(self.feature_extractor(source), self.feature_extractor(target))

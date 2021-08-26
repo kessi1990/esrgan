@@ -3,86 +3,14 @@ import torch.nn as nn
 import torch.utils.data.dataset as dataset
 
 import os
-import time
 import multiprocessing as mp
-
-from torchvision.transforms import transforms as t
-from PIL import Image
 
 from models.generator import Generator
 from models.discriminator import Discriminator
 from models.content_loss import ContentLoss
 from datasets.train_dataset import TrainDataset
-from utils import utils_img
-
-
-def train():
-
-    for i, (low_res, high_res) in enumerate(train_dataloader):
-        #####################################################################################
-        # 1. discriminator network:
-        #####################################################################################
-
-        # zero gradients
-        discriminator_optimizer.zero_grad()
-
-        # generate super resolution from low resolution
-        super_res = generator(low_res)
-
-        # discriminate real (high resolution = groundtruth) and fake (generated super resolution)
-        # --> discriminator learns to differentiate between real and fake data
-        output_real = discriminator(high_res)
-        output_fake = discriminator(super_res.detach())
-
-        # generate labels for real (high resolution = groundtruth) samples = 1 and fake (super resolution) samples = 0
-        label_real = torch.full((batch_size, 1), 1, dtype=low_res.dtype)
-        label_fake = torch.full((batch_size, 1), 0, dtype=low_res.dtype)
-
-        # compute adversarial loss for real (high resolution) and fake (super resolution) images
-        loss_real_d = adversarial_criterion(output_real - torch.mean(output_fake), label_real)
-        loss_fake_d = adversarial_criterion(output_fake - torch.mean(output_real), label_fake)
-
-        # compute total discriminator loss
-        total_loss_d = loss_real_d + loss_fake_d
-
-        # loss backwards
-        total_loss_d.backward()
-        discriminator_optimizer.step()
-
-        #####################################################################################
-        # 2. generator network:
-        #####################################################################################
-
-        # zero gradients
-        generator.zero_grad()
-
-        # generate super resolution from high_res
-        super_res = generator(low_res)
-
-        # discriminate real (high resolution = groundtruth) and fake (generated super resolution)
-        # --> generator learns to fool discriminator
-        # --> discriminator can no longer differentiate between real and fake data
-        output_real = discriminator(high_res.detach())
-        output_fake = discriminator(super_res)
-
-        # compute perceptual loss = mean absolute error (L1) of pixels
-        perceptual_loss = perceptual_criterion(super_res, high_res.detach())
-
-        # compute content loss (L1) using pre-trained vgg19 as feature extractor
-        content_loss = content_criterion(super_res, high_res.detach())
-
-        # compute adversarial loss
-        adversarial_loss = adversarial_criterion(output_fake - torch.mean(output_real), label_real)
-
-        # compute total generator loss
-        total_loss_g = alpha * perceptual_loss + lambda_ * adversarial_loss + eta * content_loss
-
-        # loss backwards
-        total_loss_g.backward()
-        generator_optimizer.step()
-
-        # zero gradients
-        generator.zero_grad()
+from training import train
+from utils import utils
 
 
 if __name__ == '__main__':
@@ -95,6 +23,7 @@ if __name__ == '__main__':
     alpha = 0.01
     eta = 1
     lambda_ = 0.005
+    hyperparameters = {'batch_size': batch_size, 'alpha': alpha, 'eta': eta, 'lambda': lambda_}
 
     # check device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -118,17 +47,22 @@ if __name__ == '__main__':
 
     # datasets, dataloaders and test image
     path_train = os.path.join('data', 'train_data')
-    # test_img = t.Compose([t.ToTensor()])(Image.open('data/test_img.jpg').convert('RGB'))
+    test_img = utils.test_img(os.path.join('data', 'test_img.jpg'))
     train_dataset = TrainDataset(path_train)
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                    num_workers=4, pin_memory=True, drop_last=True)
 
-    for e in range(epochs):
+    losses = []
+
+    for e in range(1, epochs + 1):
         # train GAN
-        start = time.time()
-        train()
-        end = time.time()
-        print(f'epoch {e}, time: {end - start}')
+        generator_loss, discriminator_loss = train(generator, discriminator, train_dataloader,
+                                                   generator_optimizer, discriminator_optimizer,
+                                                   perceptual_criterion, content_criterion, adversarial_criterion,
+                                                   hyperparameters, epoch=e)
+
+        # save total losses from both generator and discriminator for plotting
+        losses.append((generator_loss, discriminator_loss))
 
         if e % 100 == 0:
             # save model
@@ -137,8 +71,7 @@ if __name__ == '__main__':
             torch.save(discriminator.state_dict(), os.path.join('output', f'discriminator_{e}.pth'))
 
             # generate and save super resolution image from test image for each epoch
-            with torch.no_grad():
-                start = time.time()
-                super_resolution = torch.randn((3, 128, 128))  # generator(test_img.unsqueeze(dim=0))
-                end = time.time()
-                utils_img.save_image(super_resolution.detach(), os.path.join('output', f'super_resolution_{e}.png'))
+            if test_img is not None:
+                with torch.no_grad():
+                    super_resolution = generator(test_img.unsqueeze(dim=0).to(device))
+                    utils.save_image(super_resolution.detach(), os.path.join('output', f'super_resolution_{e}.png'))

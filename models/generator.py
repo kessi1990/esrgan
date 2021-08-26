@@ -8,6 +8,7 @@ class ResidualBlock(nn.Module):
     blocks 1 - 4: conv2d + leaky relu
     block      5: conv2d
     """
+
     def __init__(self, channels, growth_channels, scale):
         """
 
@@ -15,6 +16,7 @@ class ResidualBlock(nn.Module):
         :param growth_channels:
         :param scale:
         """
+
         super(ResidualBlock, self).__init__()
         self.scale = scale
 
@@ -41,6 +43,7 @@ class ResidualBlock(nn.Module):
         :param x:
         :return:
         """
+
         conv_1 = self.conv_1(x)
         conv_2 = self.conv_2(torch.cat((x, conv_1), dim=1))
         conv_3 = self.conv_3(torch.cat((x, conv_1, conv_2), dim=1))
@@ -54,6 +57,7 @@ class ResidualInResidualDenseBlock(nn.Module):
     """
 
     """
+
     def __init__(self, channels, growth_channels, scale):
         """
 
@@ -61,6 +65,7 @@ class ResidualInResidualDenseBlock(nn.Module):
         :param growth_channels:
         :param scale:
         """
+
         super(ResidualInResidualDenseBlock, self).__init__()
         self.scale = scale
         self.dense_block_1 = ResidualBlock(channels, growth_channels, scale)
@@ -88,6 +93,7 @@ class Generator(nn.Module):
 
         :param nr_blocks:
         """
+
         super(Generator, self).__init__()
 
         # number of ResidualInResidualDenseBlocks (RRDBs)
@@ -104,8 +110,14 @@ class Generator(nn.Module):
         self.conv_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # upsampling layers
-        self.up_1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
-        self.up_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
+        self.up_1 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        )
+        self.up_2 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        )
 
         # follow up layer after upsampling layers
         self.conv_3 = nn.Sequential(
@@ -122,13 +134,13 @@ class Generator(nn.Module):
         :param x:
         :return:
         """
+
         out_1 = self.conv_1(x)
         trunk = self.trunk(out_1)
         out_2 = self.conv_2(trunk)
         out = torch.add(out_1, out_2)
-        out = functional.leaky_relu(self.up_1(functional.interpolate(out, scale_factor=2, mode='nearest')),
-                                    negative_slope=0.2, inplace=True)
-        out = functional.leaky_relu(self.up_2(functional.interpolate(out, scale_factor=2, mode='nearest')),
-                                    negative_slope=0.2, inplace=True)
+        out = self.up_1(functional.interpolate(out, scale_factor=2, mode='nearest'))
+        out = self.up_2(functional.interpolate(out, scale_factor=2, mode='nearest'))
         out = self.conv_3(out)
+
         return self.conv_4(out)

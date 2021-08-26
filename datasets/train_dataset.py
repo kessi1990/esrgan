@@ -1,7 +1,7 @@
 from torch.utils.data.dataset import Dataset
 from PIL import Image
 
-from utils import utils_img
+from utils import utils
 
 
 class TrainDataset(Dataset):
@@ -15,17 +15,15 @@ class TrainDataset(Dataset):
         :param image_size:
         :param upscale_factor:
         """
+
         super(TrainDataset, self).__init__()
 
         low_res_size = image_size // upscale_factor
 
-        self.files = utils_img.load_images(root)
-
-        self.transform_low = utils_img.transform_low(low_res_size)
-
-        self.transform_high = utils_img.transform_high(image_size)
-
-        self.normalize = utils_img.normalize()
+        self.files = utils.load_images(root)
+        self.transform_low = utils.transform_low(low_res_size)
+        self.transform_high = utils.transform_high(image_size)
+        self.normalize = utils.normalize()
 
     def __getitem__(self, index):
         """
@@ -33,12 +31,11 @@ class TrainDataset(Dataset):
         :param index:
         :return:
         """
+
         file = Image.open(self.files[index]).convert('RGB')
 
         high_res = self.transform_high(file)
-
         low_res = self.transform_low(high_res)
-
         high_res = self.normalize(high_res)
 
         return low_res, high_res
