@@ -1,19 +1,19 @@
-from torch.utils.data.dataset import Dataset
+from torch.utils.data import dataset
 from PIL import Image
 
 from utils import utils
 
 
-class TrainDataset(Dataset):
+class TrainDataset(dataset.Dataset):
     """
-
+    dataset class, contains training data, returns already transformed data samples
     """
     def __init__(self, root, image_size=128, upscale_factor=4):
         """
-
-        :param root:
-        :param image_size:
-        :param upscale_factor:
+        init / constructor
+        :param root: String, root directory
+        :param image_size: integer, defines size of image data
+        :param upscale_factor: integer, defines scaling factor
         """
 
         super(TrainDataset, self).__init__()
@@ -27,9 +27,10 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         """
-
-        :param index:
-        :return:
+        fetches data sample by key (sampled by index), applies transformation pipelines (downscaling) and normalizes
+        the image data
+        :param index: integer for accessing data structure
+        :return: pytorch tensors containing image data of low and high resolution
         """
 
         file = Image.open(self.files[index]).convert('RGB')
@@ -42,7 +43,7 @@ class TrainDataset(Dataset):
 
     def __len__(self):
         """
-
+        returns the length files for this dataset class
         :return:
         """
         return len(self.files)

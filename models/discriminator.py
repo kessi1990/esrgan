@@ -3,18 +3,18 @@ import torch.nn as nn
 
 class Discriminator(nn.Module):
     """
-
+    discriminator network
     """
 
-    def __init__(self, image_size):
+    def __init__(self, scale):
         """
-
-        :param image_size:
+        init / constructor
+        :param scale: integer, defines scaling factor
         """
 
         super(Discriminator, self).__init__()
 
-        feature_size = image_size // 32
+        self.scale = scale
 
         # first conv layer
         self.conv_1 = nn.Sequential(
@@ -44,16 +44,16 @@ class Discriminator(nn.Module):
                                                     for i, (in_c, out_c) in enumerate(zip(in_channels, out_channels))])
 
         self.classifier = nn.Sequential(
-            nn.Linear(512 * feature_size * feature_size, 100),
+            nn.Linear(512 * self.scale * self.scale, 100),  # 4 times the features both in x and y direction
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
             nn.Linear(100, 1)
         )
 
     def forward(self, x):
         """
-
-        :param x:
-        :return:
+        forwards image input through discriminator network
+        :param x: pytorch tensor, contains image data
+        :return: pytorch tensor, contains class membership info
         """
 
         out = self.conv_1(x)

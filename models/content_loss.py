@@ -6,16 +6,17 @@ from torchvision.models import vgg19
 
 class ContentLoss(nn.Module):
     """
-
+    class for constructing and obtaining the content loss based on the layers of a pre-trained vgg19 network
+    (feature extractor) as suggested in the original paper
     """
     def __init__(self):
         """
-
+        init / constructor
         """
 
         super(ContentLoss, self).__init__()
 
-        # 36th layer of vgg19 acts as feature extractor
+        # layers of vgg19 act as feature extractor
         self.feature_extractor = nn.Sequential(*list(vgg19(pretrained=True).features.children())[:35]).eval()
 
         # freeze model parameters
@@ -24,10 +25,10 @@ class ContentLoss(nn.Module):
 
     def forward(self, source, target):
         """
-
-        :param source:
-        :param target:
-        :return:
+        computes the content l1 loss based on the extracted features of both the source and target image
+        :param source: pytorch tensor, contains source image data
+        :param target: pytorch tensor, contains target image data
+        :return: content loss
         """
 
         return functional.l1_loss(self.feature_extractor(source), self.feature_extractor(target))

@@ -5,16 +5,17 @@ import torch.nn.functional as functional
 
 class ResidualBlock(nn.Module):
     """
+    residual dense block
     blocks 1 - 4: conv2d + leaky relu
-    block      5: conv2d
+    block 5: conv2d
     """
 
     def __init__(self, channels, growth_channels, scale):
         """
-
-        :param channels:
-        :param growth_channels:
-        :param scale:
+        init / constructor method
+        :param channels: integer, defines number of in channels
+        :param growth_channels: integer, defines number of growth channels
+        :param scale: integer, defines scaling factor
         """
 
         super(ResidualBlock, self).__init__()
@@ -39,9 +40,9 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x):
         """
-
-        :param x:
-        :return:
+        forwards image input through residual architecture
+        :param x: pytorch tensor, contains image data
+        :return: pytorch tensor with image data after upscaling
         """
 
         conv_1 = self.conv_1(x)
@@ -55,15 +56,15 @@ class ResidualBlock(nn.Module):
 
 class ResidualInResidualDenseBlock(nn.Module):
     """
-
+    residual in residual dense block, consists of 3 residual dense blocks
     """
 
     def __init__(self, channels, growth_channels, scale):
         """
-
-        :param channels:
-        :param growth_channels:
-        :param scale:
+        init / constructor
+        :param channels: integer, defines number of in channels
+        :param growth_channels: integer, defines number of growth channels
+        :param scale: integer, defines scaling factor
         """
 
         super(ResidualInResidualDenseBlock, self).__init__()
@@ -74,9 +75,9 @@ class ResidualInResidualDenseBlock(nn.Module):
 
     def forward(self, x):
         """
-
-        :param x:
-        :return:
+        forwards image input through residual architecture
+        :param x: pytorch tensor, contains image data
+        :return: pytorch tensor with image data after upscaling
         """
         out = self.dense_block_1(x)
         out = self.dense_block_2(out)
@@ -86,12 +87,12 @@ class ResidualInResidualDenseBlock(nn.Module):
 
 class Generator(nn.Module):
     """
-
+    generator network
     """
     def __init__(self, nr_blocks):
         """
-
-        :param nr_blocks:
+        init / constructor
+        :param nr_blocks: integer, defines number of residual in residual dense blocks
         """
 
         super(Generator, self).__init__()
@@ -130,15 +131,17 @@ class Generator(nn.Module):
 
     def forward(self, x):
         """
-
-        :param x:
-        :return:
+        forwards image input through generator network
+        :param x: pytorch tensor, contains image data
+        :return: pytorch tensor with image data after upscaling
         """
 
         out_1 = self.conv_1(x)
         trunk = self.trunk(out_1)
+
         out_2 = self.conv_2(trunk)
         out = torch.add(out_1, out_2)
+
         out = self.up_1(functional.interpolate(out, scale_factor=2, mode='nearest'))
         out = self.up_2(functional.interpolate(out, scale_factor=2, mode='nearest'))
         out = self.conv_3(out)
